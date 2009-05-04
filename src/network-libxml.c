@@ -26,11 +26,11 @@ net_post_blocking(const char *url, GSList *headers, GString *post,
 	int len;
 	NetStatusProgress progress;
 
-	if (conf.options.netdump && post) 
+	if (conf.options.netdump && post)
 		fprintf(stderr, _("Request: [%s]\n"), post->str);
 
 	xmlNanoHTTPInit();
-	
+
 	if (conf.options.useproxy) {
 		if (conf.proxyuser) {
 			g_set_error(err, NET_ERROR, NET_ERROR_GENERIC,
@@ -99,7 +99,7 @@ net_post_blocking(const char *url, GSList *headers, GString *post,
 
 	success = TRUE;
 
-	if (conf.options.netdump) 
+	if (conf.options.netdump)
 		fprintf(stderr, _("Response: [%s]\n"), response->str);
 
 out:
