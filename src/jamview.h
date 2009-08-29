@@ -49,5 +49,5 @@ void jam_view_toggle_meta(JamView *view, JamViewMeta meta, gboolean show);
 gboolean jam_view_get_meta_visible(JamView *view, JamViewMeta meta);
 
 void jam_view_emit_conf(JamView *view);
-
+void jam_view_attach_macros(JamView *self, gpointer macros);
 #endif /* _jam_view_ */

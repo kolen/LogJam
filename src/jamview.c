@@ -7,6 +7,7 @@
 #include "config.h"
 
 #include "gtk-all.h"
+#include "macros.h"
 
 #ifdef HAVE_GTKSPELL
 #include <gtkspell/gtkspell.h>
@@ -19,6 +20,7 @@
 #include "security.h"
 #include "marshalers.h"
 #include "datesel.h"
+#include "htmltoolbar.h"
 
 #define KEY_PICTUREKEYWORD "logjam-picturekeyword"
 
@@ -56,6 +58,9 @@ struct _JamView {
 	UndoMgr *undomgr;
 	JamAccount *account;
 	JamDoc *doc;
+
+        GtkWidget *htmltoolbar;
+        Macros *macros;
 };
 
 struct _JamViewClass {
@@ -695,6 +700,11 @@ jam_view_init(JamView *view) {
 
 	subject_add(view);
 	jam_view_load_conf(view);
+
+	view->htmltoolbar = jam_html_toolbar_new();
+
+	gtk_box_pack_start(GTK_BOX(view), view->htmltoolbar, FALSE, FALSE, 0);
+
 	gtk_box_pack_start(GTK_BOX(view), scroll_wrap(view->entry),
 			TRUE, TRUE, 0);
 }
@@ -869,3 +879,10 @@ jam_view_get_type(void) {
 	return new_type;
 }
 
+void
+jam_view_attach_macros(JamView *self, gpointer macros)
+{
+  macros_attach_text_buffer(macros, GTK_TEXT_VIEW(self->entry)->buffer);
+  self->macros = macros;
+  jam_html_toolbar_attach_macros(self->htmltoolbar, macros);
+}

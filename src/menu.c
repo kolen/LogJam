@@ -32,6 +32,8 @@
 #include "sync.h"
 #include "html_markup.h"
 #include "console.h"
+#include "macros.h"
+#include "macros-edit.h"
 
 enum {
 	ACTION_NONE=0,
@@ -65,8 +67,10 @@ enum {
 	ACTION_JOURNAL_USE_SEP,
 	ACTION_CHANGE_USER,
 	ACTION_MANAGER,
+	
+	ACTION_TOOLS_CONSOLE,
 
-	ACTION_TOOLS_CONSOLE
+	ACTION_MACROS
 };
 
 void about_dlg(GtkWidget *mainwin);
@@ -442,6 +446,8 @@ static GtkItemFactoryEntry menu_items[] = {
 { N_("/Journal/_LiveJournal Console..."), NULL, menu_console, ACTION_TOOLS_CONSOLE, NULL },
 { N_("/Journal/_Web Links"),              NULL, NULL, ACTION_WEB_LINKS, "<Branch>" },
 
+{ N_("/_Macros"),                         NULL, NULL, ACTION_MACROS, "<Branch>"}
+
 };
 	int itemcount = sizeof(menu_items) / sizeof(menu_items[0]);
 	int i;
@@ -473,6 +479,9 @@ static GtkItemFactoryEntry menu_items[] = {
 
 	/* Journal menu */
 	jw->mweb = gtk_item_factory_get_item_by_action(jw->factory, ACTION_WEB_LINKS);
+
+        /* Macros menu */
+        jw->mmacros = gtk_item_factory_get_item_by_action(jw->factory, ACTION_MACROS);
 
 	view = jam_win_get_cur_view(jw);
 	g_signal_connect(G_OBJECT(view), "meta_toggle",
@@ -579,3 +588,79 @@ menu_account_changed(JamWin *jw) {
 	}
 }
 
+static void
+macrosmenu_cb(GtkWidget *widget, gpointer user_data)
+{
+  Macros *m;
+  MacroItem *i;
+
+  m = (Macros*)g_object_get_data(G_OBJECT(widget), "macros");
+  i = (MacroItem*)g_object_get_data(G_OBJECT(widget), "macro_item");
+
+  macros_execute_macro(m, i);
+}
+
+static void
+macrosmenu_edit_cb(GtkWidget *widget, gpointer user_data)
+{
+  Macros *m;
+  GtkWindow *w;
+  
+  m = (Macros*)g_object_get_data(G_OBJECT(widget), "macros");
+  w = GTK_WINDOW(g_object_get_data(G_OBJECT(widget), "parent"));
+  
+  macros_edit_window_run(w, m);
+}
+
+static GtkWidget*
+macrosmenu_widget(JamWin *jw, Macros *m) {
+  GtkWidget *menu, *item;
+  GList *i;
+
+  menu = gtk_menu_new();
+
+  item = gtk_menu_item_new_with_label(_("Edit macros..."));
+  g_object_set_data(G_OBJECT(item), "macros", m);
+  g_object_set_data(G_OBJECT(item), "parent", jw);
+  g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(macrosmenu_edit_cb), NULL);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+
+  item = gtk_menu_item_new();
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+
+  for (i = m->list; i != NULL; i = i->next) {
+    item = gtk_menu_item_new_with_label(((MacroItem*)(i->data))->name);
+
+    g_object_set_data(G_OBJECT(item), "macros", m);
+    g_object_set_data(G_OBJECT(item), "macro_item", i->data);
+
+    g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(macrosmenu_cb), NULL);
+
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+  }
+  return menu;
+}
+
+static void 
+menu_update_macros(JamWin *jw, Macros *m) {
+  GtkMenuItem *sm;
+  sm = (GtkMenuItem*)gtk_menu_item_get_submenu(GTK_MENU_ITEM(jw->mmacros));
+  if (sm) gtk_widget_destroy(GTK_WIDGET(sm));
+
+  gtk_menu_item_set_submenu(GTK_MENU_ITEM(jw->mmacros),
+			    macrosmenu_widget(jw, m));
+  gtk_widget_show_all(jw->mmacros);
+}
+
+static void
+menu_macros_update_callback(Macros *m, gpointer user_data) {
+  g_assert(IS_MACROS(m));
+  g_assert(GTK_IS_WIDGET(user_data));
+  menu_update_macros(user_data, m);
+}
+
+void
+menu_attach_macros(JamWin *jw, GObject *m) {
+  menu_update_macros(jw, MACROS(m));
+  g_signal_connect(m, "changed", G_CALLBACK(menu_macros_update_callback), (gpointer)jw);
+}

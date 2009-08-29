@@ -41,6 +41,8 @@
 #include "usejournal.h"
 #include "userlabel.h"
 
+#include "macros.h"
+
 #undef USE_STRUCTUREDTEXT
 
 #ifdef USE_STRUCTUREDTEXT
@@ -799,6 +801,7 @@ jam_run(JamDoc *doc) {
 	GtkWidget *vbox;
 	LJEntry *draftentry;
 	JamWin *jw;
+	Macros *macros;
 
 	jw = JAM_WIN(jam_win_new());
 	gtk_window_set_default_size(GTK_WINDOW(jw), 400, 300);
@@ -833,6 +836,11 @@ jam_run(JamDoc *doc) {
 	jam_update_actions(jw);
 
 	gtk_widget_show(GTK_WIDGET(jw));
+
+	macros = (Macros*)macros_new();
+	macros_load(macros, app.conf_dir);
+	jam_view_attach_macros(JAM_VIEW(jw->view), (gpointer)macros);
+	menu_attach_macros(jw, G_OBJECT(macros));
 
 	/* suck a bunch of events in. */
 	while (gtk_events_pending())

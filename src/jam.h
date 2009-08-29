@@ -21,6 +21,7 @@ typedef struct {
 	/* menu items. */
 	GtkWidget *mweb, *msubmitsep, *msubmit, *msaveserver; 
 	GtkWidget *mundo, *mredo;
+        GtkWidget *mmacros;
 
 	GtkWidget *userlabel;
 	GtkWidget *baction; /* "action" button: 

@@ -12,5 +12,5 @@
 GtkWidget* menu_make_bar(JamWin *jw);
 
 void menu_new_doc(JamWin *jw);
-
+void menu_attach_macros(JamWin *jw, GObject *m);
 #endif /* menu_h */

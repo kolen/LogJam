@@ -59,6 +59,9 @@ src_gtk = gtk-all.h util-gtk.c util-gtk.h \
           undo.c undo.h \
           userlabel.c userlabel.h \
           get_cmd_out.c get_cmd_out.h \
+          htmltoolbar.c htmltoolbar.h \
+          macros.c macros.h \
+	  macros-edit.c macros-edit.h \
           $(HTML_MARKUP)
 
 src_preview = $(PREVIEW)
