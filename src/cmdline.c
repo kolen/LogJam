@@ -38,8 +38,6 @@
 #include "cmdline.h"
 #include "cmdline_data.h"
 
-gboolean net_run_verb_ctx(LJVerb *verb, NetContext *ctx, GError **err);
-
 
 typedef struct _Command Command;
 
@@ -665,7 +663,7 @@ cmdline_load_file(JamDoc *doc, char *filename, GError **err) {
 
 static void
 command_dispatch(Cmdline *cmdline, Command *commands, const char *help, int argc, gchar *argv[]) {
-	JamAccount *acc;
+	JamAccount *acc = NULL;
 	Command *command = NULL;
 	char *cmdname;
 	int i;
