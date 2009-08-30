@@ -9,10 +9,14 @@ typedef struct MacrosEditWindow_ {
   GtkWidget *name, *value;
 
   GtkListStore *store;
+
+  MacroItem *current_macro_item;
 } MacrosEditWindow;
 
 void macros_edit_buttonpressed_add_cb(GtkButton *widget, MacrosEditWindow *mew);
 void macros_edit_selchanged_cb(GtkTreeSelection *treeselection, MacrosEditWindow *mew);
+void macros_edit_namechanged_cb(GtkEntry *namewidget, MacrosEditWindow *mew);
+void macros_edit_valuechanged_cb(GtkTextView *namewidget, MacrosEditWindow *mew);
 
 void
 macros_edit_window_run(GtkWindow *parent, Macros *macros)
@@ -65,7 +69,6 @@ macros_edit_window_run(GtkWindow *parent, Macros *macros)
   gtk_tree_view_column_add_attribute(column, cell_renderer, "text", 0);
   gtk_tree_view_append_column(GTK_TREE_VIEW(mew->macrolist), column);
 
-
   gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(mew->macrolist), TRUE);
 
   mew->toolbar = GTK_TOOLBAR(gtk_toolbar_new());
@@ -95,6 +98,9 @@ macros_edit_window_run(GtkWindow *parent, Macros *macros)
   mew->value = gtk_text_view_new();
   g_assert(GTK_IS_ENTRY(mew->name));
   g_assert(GTK_IS_TEXT_VIEW(mew->value));
+
+  g_signal_connect(G_OBJECT(mew->name), "changed", G_CALLBACK(macros_edit_namechanged_cb), mew);
+  g_signal_connect(G_OBJECT(mew->value), "changed", G_CALLBACK(macros_edit_namechanged_cb), mew);
 
   g_signal_connect(G_OBJECT(sel), "changed", G_CALLBACK(macros_edit_selchanged_cb), mew);
 
@@ -151,6 +157,18 @@ macros_edit_selchanged_cb(GtkTreeSelection *treeselection, MacrosEditWindow *mew
   gtk_entry_set_text(GTK_ENTRY(mew->name), m->name);
   gtk_text_buffer_set_text
     (gtk_text_view_get_buffer(GTK_TEXT_VIEW(mew->value)), m->value, -1);
-  g_object_set(G_OBJECT(mew->name), "bound_macroitem", m, NULL);
-  g_object_set(G_OBJECT(mew->value), "bound_macroitem", m, NULL);
+  mew->current_macro_item = m;
+}
+
+void
+macros_edit_namechanged_cb(GtkEntry *namewidget, MacrosEditWindow *mew) {
+  if (mew->current_macro_item) {
+      g_free(mew->current_macro_item->name);
+      mew->current_macro_item->name = g_strdup(gtk_entry_get_text(GTK_ENTRY(namewidget)));
+  }
+}
+
+void
+macros_edit_valuechanged_cb(GtkTextView *namewidget, MacrosEditWindow *mew) {
+
 }
