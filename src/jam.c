@@ -100,7 +100,7 @@ jam_save_as_file(JamWin *jw) {
 	GtkWidget *filesel;
 	GError *err = NULL;
 	gboolean ret = FALSE;
-	
+
 	filesel = gtk_file_chooser_dialog_new(_("Save Entry As"), GTK_WINDOW(jw),
 			GTK_FILE_CHOOSER_ACTION_SAVE,
 			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
@@ -120,7 +120,7 @@ jam_save_as_file(JamWin *jw) {
 		if (!jam_doc_save_as_file(jw->doc, filename, &err)) {
 			jam_warning(GTK_WINDOW(filesel), err->message);
 			g_error_free(err);
-		} else { 
+		} else {
 			/* save succeeded. */
 			ret = TRUE;
 			break;
@@ -217,7 +217,7 @@ jam_clear_entry(JamWin *jw) {
 	JamDoc *doc = jw->doc;
 	JamDoc *newdoc;
 	JamAccount *acc;
-	
+
 	acc = jam_doc_get_account(doc);
 	g_object_ref(acc); /* keep the JamAccount around... */
 	g_object_unref(G_OBJECT(jw->doc));
@@ -342,7 +342,7 @@ jam_submit_entry(JamWin *jw) {
 	ctx = net_ctx_gtk_new(GTK_WINDOW(jw), NULL);
 	if (jam_host_do_post(jam_account_get_host(acc), ctx, jw->doc, NULL)) {
 		gint type = jam_doc_get_entry_type(jw->doc);
-		if (type == ENTRY_DRAFT) {
+		if (type == ENTRY_DRAFT && !conf.options.keepsaveddrafts) {
 			if (jam_confirm(GTK_WINDOW(jw),
 					_("Delete"), _("Delete this draft from disk?")))
 				delete_draft(jw);
@@ -355,7 +355,7 @@ jam_submit_entry(JamWin *jw) {
 	net_ctx_gtk_free(ctx);
 }
 
-static void 
+static void
 action_cb(GtkWidget *w, JamWin *jw) {
 	int flags = jam_doc_get_flags(jw->doc);
 	if (flags & LOGJAM_DOC_CAN_SAVE) {
@@ -365,6 +365,10 @@ action_cb(GtkWidget *w, JamWin *jw) {
 	} else {
 		g_warning("action callback, but no default action?\n");
 	}
+#ifdef USE_DOCK
+	if (conf.options.close_when_send && app.docklet)
+		gtk_widget_hide(GTK_WIDGET(jw));
+#endif
 }
 
 static void
@@ -378,8 +382,8 @@ delete_server_entry(JamWin *jw) {
 	}
 	net_ctx_gtk_free(ctx);
 }
-	
-static void 
+
+static void
 delete_cb(GtkWidget *w, JamWin *jw) {
 	gint type = jam_doc_get_entry_type(jw->doc); /* defer making a copy */
 	const gchar *confirm_text = type == ENTRY_DRAFT ?
@@ -397,6 +401,10 @@ delete_cb(GtkWidget *w, JamWin *jw) {
 	} else {
 		delete_server_entry(jw);
 	}
+#ifdef USE_DOCK
+	if (conf.options.close_when_send && app.docklet)
+		gtk_widget_hide(GTK_WIDGET(jw));
+#endif
 }
 
 static void
@@ -431,7 +439,7 @@ changeuser(JamWin *jw, JamAccount *acc) {
 	update_userlabel(jw);
 }
 
-void 
+void
 jam_do_changeuser(JamWin *jw) {
 	JamAccount *acc = login_dlg_run(GTK_WINDOW(jw), NULL, jw->account);
 
@@ -449,7 +457,7 @@ jam_remote_change_user_cb(JamWin *jw, char *username, GError **err) {
 		u = lj_server_get_user_by_username(jam_account_get_server(jw->account), username);
 		if (!u)
 			return FALSE;
-		
+
 		changeuser(jw, jam_account_make(u));*/
 	}
 	gtk_window_present(GTK_WINDOW(jw));
@@ -469,7 +477,7 @@ jam_save_autosave(JamWin *jw) {
 	lj_entry_free(entry);
 	g_free(path);
 }
-	
+
 gboolean
 jam_save_autosave_cb(JamWin *jw) {
 	if (!jam_doc_get_dirty(jw->doc))
@@ -480,7 +488,7 @@ jam_save_autosave_cb(JamWin *jw) {
 	return TRUE; /* perpetuate timeout */
 }
 
-void 
+void
 jam_open_entry(JamWin *jw) {
 	GtkWidget *filesel;
 	GtkWidget *hbox, *filetype;
@@ -497,7 +505,7 @@ jam_open_entry(JamWin *jw) {
 	}, *ft;
 
 	if (!jam_confirm_lose_entry(jw)) return;
-	
+
 	filesel = gtk_file_chooser_dialog_new(_("Open Entry"), GTK_WINDOW(jw),
 			GTK_FILE_CHOOSER_ACTION_OPEN,
 			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
@@ -520,7 +528,7 @@ jam_open_entry(JamWin *jw) {
 	gtk_widget_show_all(hbox);
 
 	gtk_file_chooser_set_extra_widget(GTK_FILE_CHOOSER(filesel), hbox);
-	
+
 	while (gtk_dialog_run(GTK_DIALOG(filesel)) == GTK_RESPONSE_ACCEPT) {
 		const gchar *filename;
 		GError *err = NULL;
@@ -650,7 +658,7 @@ static GtkWidget*
 make_action_bar(JamWin *jw) {
 	GtkWidget *actionbox, *buttonbox;
 
-	actionbox = gtk_hbox_new(FALSE, 18); 
+	actionbox = gtk_hbox_new(FALSE, 18);
 
 	/* XXX blogger jw->cfi_main = cfindicator_new(fetch_cfmgr(jw), CF_MAIN, GTK_WINDOW(jw));
 	cfmgr_set_state(fetch_cfmgr(jw), CF_DISABLED);
@@ -668,7 +676,7 @@ make_action_bar(JamWin *jw) {
 	gtk_box_pack_start(GTK_BOX(actionbox), jw->userlabel, FALSE, FALSE, 0);
 	update_userlabel(jw);
 
-	buttonbox = gtk_hbox_new(FALSE, 6); 
+	buttonbox = gtk_hbox_new(FALSE, 6);
 	/*buttonbox = gtk_hbutton_box_new();
 	gtk_box_set_spacing(GTK_BOX(buttonbox), 6);*/
 
@@ -697,11 +705,11 @@ make_app_contents(JamWin *jw, JamDoc *doc) {
 	/* TODO: when we have multiple tabs, we'll create the notebook
 	 * and pack the first view into it here */
 
-	gtk_box_pack_start(GTK_BOX(vbox), 
+	gtk_box_pack_start(GTK_BOX(vbox),
 			make_main_view(jw, JAM_VIEW(jw->view)), TRUE, TRUE, 0);
-	gtk_box_pack_end(GTK_BOX(vbox), 
+	gtk_box_pack_end(GTK_BOX(vbox),
 			make_action_bar(jw), FALSE, FALSE, 0);
-	
+
 	gtk_widget_show_all(vbox);
 	return vbox;
 }
@@ -759,6 +767,11 @@ jam_quit(JamWin *jw) {
 
 static gboolean
 delete_event_cb(JamWin *jw) {
+#ifdef USE_DOCK
+	if (app.docklet)
+		gtk_widget_hide(GTK_WIDGET(jw));
+	else
+#endif
 	jam_quit(jw);
 	return TRUE; /* don't ever let this delete the window; quit will do it. */
 }
@@ -796,7 +809,7 @@ jam_win_new(void) {
 
 void docklet_setup(GtkWindow *win);
 
-void 
+void
 jam_run(JamDoc *doc) {
 	GtkWidget *vbox;
 	LJEntry *draftentry;
@@ -820,9 +833,9 @@ jam_run(JamDoc *doc) {
 
 	app.cfmgr = cfmgr_new(jw->account);
 
-	vbox = gtk_vbox_new(FALSE, 0); 
+	vbox = gtk_vbox_new(FALSE, 0);
 
-	gtk_box_pack_start(GTK_BOX(vbox), 
+	gtk_box_pack_start(GTK_BOX(vbox),
 			menu_make_bar(jw), FALSE, FALSE, 0);
 
 	gtk_box_pack_start(GTK_BOX(vbox), make_app_contents(jw, doc),
@@ -834,8 +847,6 @@ jam_run(JamDoc *doc) {
 
 	gtk_widget_show(vbox);
 	jam_update_actions(jw);
-
-	gtk_widget_show(GTK_WIDGET(jw));
 
 	macros = (Macros*)macros_new();
 	macros_load(macros, app.conf_dir);
@@ -861,7 +872,13 @@ jam_run(JamDoc *doc) {
 #ifdef USE_DOCK
 	if (conf.options.docklet)
 		docklet_setup(GTK_WINDOW(jw));
+
+	if (app.docklet) {
+		if (!conf.options.start_in_dock)
+			gtk_widget_show(GTK_WIDGET(jw));
+	} else
 #endif
+	gtk_widget_show(GTK_WIDGET(jw));
 
 	draftentry = jam_load_autosave(jw);
 	if (draftentry) {

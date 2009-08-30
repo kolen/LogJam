@@ -42,22 +42,23 @@ enum {
 
 	ACTION_UNDO,
 	ACTION_REDO,
-	
+
 	ACTION_CUT,
 	ACTION_COPY,
 	ACTION_PASTE,
-	
+
 	ACTION_ENTRY_SUBMIT_SEP,
 	ACTION_ENTRY_SUBMIT_NEW,
 	ACTION_ENTRY_SAVE_SERVER,
 
 	ACTION_VIEW,
 	/* these must match JamViewMeta in meta.h. */
-	ACTION_VIEW_FIRST, 
-	ACTION_VIEW_SECURITY, 
+	ACTION_VIEW_FIRST,
+	ACTION_VIEW_SECURITY,
 	ACTION_VIEW_MOOD,
 	ACTION_VIEW_PICTURE,
 	ACTION_VIEW_MUSIC,
+	ACTION_VIEW_LOCATION,
 	ACTION_VIEW_TAGS,
 	ACTION_VIEW_PREFORMATTED,
 	ACTION_VIEW_DATESEL,
@@ -98,7 +99,7 @@ new_cb(JamWin *jw) {
 	jam_clear_entry(jw);
 }
 static void
-load_last_entry(JamWin *jw) { 
+load_last_entry(JamWin *jw) {
 	LJEntry *entry;
 
 	if (!jam_confirm_lose_entry(jw)) return;
@@ -112,7 +113,7 @@ load_last_entry(JamWin *jw) {
 	undomgr_reset(UNDOMGR(jam_view_get_undomgr(JAM_VIEW(jw->view))));
 }
 static void
-run_history_recent_dlg(JamWin *jw) { 
+run_history_recent_dlg(JamWin *jw) {
 	LJEntry *entry;
 
 	if (!jam_confirm_lose_entry(jw)) return;
@@ -126,7 +127,7 @@ run_history_recent_dlg(JamWin *jw) {
 }
 
 static void
-run_offline_dlg(JamWin *jw) { 
+run_offline_dlg(JamWin *jw) {
 	LJEntry *offline_dlg_run(GtkWindow *, JamAccount *);
 	LJEntry *entry;
 
@@ -159,7 +160,7 @@ static void
 meta_toggle_cb(JamView *view, JamViewMeta meta, gboolean show, JamWin *jw) {
 	GtkCheckMenuItem *item;
 	gboolean oldmeta;
-	
+
 	item = GTK_CHECK_MENU_ITEM(
 		gtk_item_factory_get_item_by_action(jw->factory,
 				ACTION_VIEW_FIRST+meta));
@@ -239,7 +240,7 @@ cutcopypaste_cb(JamWin *jw, int action) {
 	signalid = g_signal_lookup(signalname, G_OBJECT_TYPE(target));
 	if (signalid)
 		g_signal_emit(target, signalid, 0); /* the last param appears to only
-	                                           be used for property signals. */ 
+	                                           be used for property signals. */
 }
 
 static void
@@ -255,7 +256,7 @@ undoredo_cb(JamWin *jw, int action) {
 		}
 	}
 }
-	
+
 static void
 menu_insert_file(JamWin *jw) {
 	tools_insert_file(GTK_WINDOW(jw), jw->doc);
@@ -299,7 +300,7 @@ menu_console(JamWin *jw) {
 	console_dialog_run(GTK_WINDOW(jw), JAM_ACCOUNT_LJ(jw->account));
 }
 
-static void
+void
 menu_friends_manager(JamWin *jw) {
 	g_assert(JAM_ACCOUNT_IS_LJ(jw->account));
 	friends_manager_show(GTK_WINDOW(jw), JAM_ACCOUNT_LJ(jw->account));
@@ -324,6 +325,10 @@ menu_html_mark_strikeout(JamWin *jw) {
 static void
 menu_html_mark_monospaced(JamWin *jw) {
 	html_mark_monospaced(jw->doc);
+}
+static void
+menu_html_mark_blockquote(JamWin *jw) {
+	html_mark_blockquote(jw->doc);
 }
 
 void manager_dialog(GtkWidget *parent);
@@ -358,13 +363,13 @@ menu_usejournal_changed(JamWin *jw) {
 	gtk_widget_show(musejournalsep);
 }
 
-GtkWidget* 
+GtkWidget*
 menu_make_bar(JamWin *jw) {
 	GtkWidget *bar;
 	GtkAccelGroup *accelgroup = NULL;
 
 /* a note on accelerators:
- *  shift-ctl-[x]  is used to type in UTF-8 chars; 
+ *  shift-ctl-[x]  is used to type in UTF-8 chars;
  *  this means we can't use any shift-ctl accels
  *  using letters in the hex range [a-f]. */
 static GtkItemFactoryEntry menu_items[] = {
@@ -403,7 +408,7 @@ static GtkItemFactoryEntry menu_items[] = {
 {    "/Edit/---",     NULL, NULL, 0, "<Separator>" },
 { N_("/Edit/Cu_t"),   NULL, cutcopypaste_cb,
 	ACTION_CUT,   "<StockItem>", GTK_STOCK_CUT },
-{ N_("/Edit/_Copy"),  NULL, cutcopypaste_cb, 
+{ N_("/Edit/_Copy"),  NULL, cutcopypaste_cb,
 	ACTION_COPY,  "<StockItem>", GTK_STOCK_COPY },
 { N_("/Edit/_Paste"), NULL, cutcopypaste_cb,
 	ACTION_PASTE, "<StockItem>", GTK_STOCK_PASTE },
@@ -430,6 +435,7 @@ static GtkItemFactoryEntry menu_items[] = {
 { N_("/View/_Picture"),           NULL, menu_view_cb, ACTION_VIEW_PICTURE,      "<CheckItem>" },
 { N_("/View/_Tags"),              NULL, menu_view_cb, ACTION_VIEW_TAGS,         "<CheckItem>" },
 { N_("/View/M_usic"),             NULL, menu_view_cb, ACTION_VIEW_MUSIC,        "<CheckItem>" },
+{ N_("/View/_Location"),          NULL, menu_view_cb, ACTION_VIEW_LOCATION,     "<CheckItem>" },
 { N_("/View/_Preformatted"),      NULL, menu_view_cb, ACTION_VIEW_PREFORMATTED, "<CheckItem>" },
 { N_("/View/_Comments"),          NULL, menu_view_cb, ACTION_VIEW_COMMENTS,     "<CheckItem>" },
 
@@ -439,6 +445,7 @@ static GtkItemFactoryEntry menu_items[] = {
 { N_("/HTML/_Strikeout"),			"<ctl><alt>S", menu_html_mark_strikeout },
 { N_("/HTML/_Monospaced"),			"<ctl><alt>M", menu_html_mark_monospaced },
 { N_("/HTML/_Underline"),			"<ctl><alt>U", menu_html_mark_underline },
+{ N_("/HTML/_Blockquote"),			"<ctl><alt>Q", menu_html_mark_blockquote },
 
 { N_("/_Journal"),                      NULL,          NULL, ACTION_JOURNAL, "<Branch>" },
 { N_("/Journal/_Use Journal"),          NULL,          NULL, ACTION_JOURNAL_USE, NULL },
@@ -559,7 +566,7 @@ webmenu_widget(JamWin *jw, GSList *webmenu) {
 	return menu;
 }
 
-static void 
+static void
 menu_update_web(JamWin *jw, JamAccount *acc) {
 	LJUser *u = NULL;
 

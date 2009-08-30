@@ -16,10 +16,10 @@ add_menu_item(GtkMenuShell *ms, const gchar *id, const gchar *text) {
 	GtkWidget *item;
 
 	hbox = gtk_hbox_new(FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox), 
-			gtk_image_new_from_stock(id, GTK_ICON_SIZE_MENU), 
+	gtk_box_pack_start(GTK_BOX(hbox),
+			gtk_image_new_from_stock(id, GTK_ICON_SIZE_MENU),
 			FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), 
+	gtk_box_pack_start(GTK_BOX(hbox),
 			gtk_label_new(text), FALSE, FALSE, 0);
 
 	item = gtk_menu_item_new();
@@ -111,24 +111,34 @@ link_journal_dialog_run(GtkWindow *win, JamDoc *doc) {
 
 	if (usernick && *usernick) {
 		gchar *link;
+		gchar *img;
 		JamAccount *acc = jam_doc_get_account(doc);
-		gchar *url = jam_account_lj_get_server(JAM_ACCOUNT_LJ(acc))->url;
 
 		xml_escape(&username);
 		xml_escape(&usernick);
+
+		if (usertype == 0)
+			img = g_strdup("userinfo.gif");
+		else
+			img = g_strdup("community.gif");
 
 		link = g_strdup_printf(
 			"<a href='%s/userinfo.bml?user=%s'>"
 				"<img src='%s/img/%s' alt='[info]' align='absmiddle' width='17' height='17' border='0' />"
 			"</a>"
 			"<a style='FONT-WEIGHT: 800' href='%s/users/%s'>%s</a>",
-			url, username,
-				url, usertype == 0 ? "userinfo.gif" : "community.gif",
-			url, username, usernick);
+			jam_account_lj_get_server(JAM_ACCOUNT_LJ(acc))->url,
+			username,
+			jam_account_lj_get_server(JAM_ACCOUNT_LJ(acc))->url,
+			img,
+			jam_account_lj_get_server(JAM_ACCOUNT_LJ(acc))->url,
+			username,
+			usernick);
 
 		gtk_text_buffer_insert(buffer, &start, link, -1);
 
 		g_free(link);
+		g_free(img);
 		free(username);
 		free(usernick);
 		return;

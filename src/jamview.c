@@ -21,6 +21,8 @@
 #include "marshalers.h"
 #include "datesel.h"
 #include "htmltoolbar.h"
+#include "tags.h"
+#include "lj_dbus.h"
 
 #define KEY_PICTUREKEYWORD "logjam-picturekeyword"
 
@@ -43,6 +45,9 @@ struct _JamView {
 
 	GtkWidget *musicbar;
 	GtkWidget *musicbutton, *music;
+
+	GtkWidget *locationbar;
+	GtkWidget *location;
 
 	GtkWidget *tagsbar;
 	GtkWidget *tags;
@@ -232,7 +237,7 @@ mood_add(JamView *view) {
 	view->moodcombo = gtk_combo_new();
 	gtk_widget_set_usize(GTK_COMBO(view->moodcombo)->entry, 100, -1);
 	mood_populate(view);
-	
+
 	/*view->moodbox = gtk_hbox_new(FALSE, 12);
 	gtk_box_pack_start(GTK_BOX(view->moodbox), view->moodbutton, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(view->moodbox), view->moodcombo, TRUE, TRUE, 0);*/
@@ -360,7 +365,12 @@ picture_store(JamView *view) {
 static void
 music_refresh_cb(JamView *view) {
 	GError *err = NULL;
-	gchar *music = music_detect(&err);
+	gchar *music;
+
+	if (conf.music_mpris)
+		music = lj_dbus_mpris_current_music(jdbus, &err);
+	else
+		music = music_detect(&err);
 
 	if (music) {
 		gtk_entry_set_text(GTK_ENTRY(view->music), music);
@@ -377,7 +387,7 @@ static void
 music_add(JamView *view) {
 	view->music = gtk_entry_new();
 	view->musicbar = labelled_box_new_sg(_("_Music:"), view->music, view->sizegroup);
-	if (music_can_detect(NULL)) {
+	if (conf.music_mpris || music_can_detect(NULL)) {
 		GtkWidget *refresh = gtk_button_new_from_stock(GTK_STOCK_REFRESH);
 		g_signal_connect_swapped(G_OBJECT(refresh), "clicked",
 				G_CALLBACK(music_refresh_cb), view);
@@ -413,11 +423,68 @@ music_store(JamView *view) {
 	jam_doc_set_music(view->doc, music);
 }
 
+static void tags_store(JamView *view);
+
+static void
+tags_select_cb(JamView *view) {
+  gchar *tags;
+  GtkWidget *toplevel = gtk_widget_get_toplevel(GTK_WIDGET(view));
+
+  tags = tags_dialog(toplevel,
+		     JAM_ACCOUNT_LJ(view->account),
+		     jam_doc_get_usejournal(view->doc),
+		     (gchar *) gtk_entry_get_text(GTK_ENTRY(view->tags)));
+
+  if (tags) {
+      gtk_entry_set_text(GTK_ENTRY(view->tags), tags);
+      tags_store(view);
+  }
+}
+
+static void
+location_add(JamView *view) {
+	view->location = gtk_entry_new();
+	view->locationbar = labelled_box_new_sg(_("_Location:"), view->location, view->sizegroup);
+	gtk_box_pack_start(GTK_BOX(view), view->locationbar, FALSE, FALSE, 0);
+	gtk_box_reorder_child(GTK_BOX(view), view->locationbar, view->moodpicbar ? 2 : 1);
+	gtk_widget_show_all(view->locationbar);
+}
+static void
+location_remove(JamView *view) {
+	jam_doc_set_location(view->doc, NULL);
+	gtk_widget_destroy(view->locationbar);
+	view->locationbar = view->location = NULL;
+}
+static gboolean
+location_visible(JamView *view) {
+	return view->locationbar != NULL;
+}
+static void
+location_load(JamView *view) {
+	const char *location = jam_doc_get_location(view->doc);
+	if (location)
+		show_meta(view, JAM_VIEW_LOCATION);
+	if (location_visible(view))
+		gtk_entry_set_text(GTK_ENTRY(view->location), location ? location : "");
+}
+static void
+location_store(JamView *view) {
+	const char *location = gtk_entry_get_text(GTK_ENTRY(view->location));
+	if (location[0] == 0) location = NULL;
+	jam_doc_set_location(view->doc, location);
+}
+
 static void
 tags_add(JamView *view) {
+	GtkWidget *tagbutton;
 	view->tags = gtk_entry_new();
 	view->tagsbar = labelled_box_new_sg(_("_Tags:"), view->tags, view->sizegroup);
 	gtk_box_pack_start(GTK_BOX(view), view->tagsbar, FALSE, FALSE, 0);
+	tagbutton = gtk_button_new_with_label("...");
+	g_signal_connect_swapped(G_OBJECT(tagbutton), "clicked",
+				 G_CALLBACK(tags_select_cb), view);
+	gtk_box_pack_start(GTK_BOX(view->tagsbar),
+			   tagbutton, FALSE, FALSE, 0);
 	gtk_box_reorder_child(GTK_BOX(view), view->tagsbar, view->musicbar ? 2 : 1);
 	gtk_widget_show_all(view->tagsbar);
 }
@@ -570,6 +637,7 @@ static struct {
 	{ "mood",         TRUE, STD(mood),         mood_account_changed     },
 	{ "picture",      TRUE, STD(picture),      picture_account_changed  },
 	{ "music",        TRUE, STD(music),        NULL },
+	{ "location",     TRUE, STD(location),     NULL },
 	{ "tags",         TRUE, STD(tags),         NULL },
 	{ "preformatted", TRUE, STD(preformatted), NULL },
 	{ "datesel",      TRUE, STD(datesel),      NULL },
@@ -670,7 +738,7 @@ populate_entry_popup(GtkTextView *text, GtkMenu *menu, JamView *view) {
 			G_CALLBACK(redo_cb), view);
 	gtk_menu_shell_prepend(GTK_MENU_SHELL(menu), menu_item);
 	gtk_widget_show(menu_item);
-	
+
 	menu_item = gtk_image_menu_item_new_from_stock(GTK_STOCK_UNDO, NULL);
 	gtk_widget_set_sensitive(menu_item,
 			undomgr_can_undo(view->undomgr));

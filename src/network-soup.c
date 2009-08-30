@@ -57,10 +57,13 @@ net_post_blocking(const char *url, GSList *headers, GString *post,
 		}
 		session = soup_session_sync_new_with_options (
 			SOUP_SESSION_PROXY_URI, suri,
+			SOUP_SESSION_USER_AGENT, LOGJAM_USER_AGENT,
 			NULL);
 		soup_uri_free(suri);
 	} else
-		session = soup_session_sync_new ();
+		session = soup_session_sync_new_with_options (
+			SOUP_SESSION_USER_AGENT, LOGJAM_USER_AGENT,
+			NULL);
 
 	req = soup_message_new(post ? "POST" : "GET", url);
 	g_signal_connect(G_OBJECT(req), "got-chunk",
@@ -86,7 +89,7 @@ net_post_blocking(const char *url, GSList *headers, GString *post,
 
 	response = g_string_new_len(req->response_body->data, req->response_body->length);
 
-	if (conf.options.netdump) 
+	if (conf.options.netdump)
 		fprintf(stderr, _("Response: [%s]\n"), response->str);
 
 out:

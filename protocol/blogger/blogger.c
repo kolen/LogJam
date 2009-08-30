@@ -44,7 +44,7 @@ blogger_deletePost(GXRContext *ctx, const char * arg_appkey, const char * arg_po
 	if (!gxr_run_request(ctx, doc, GXR_VALUE_BOOLEAN, &retval, err))
 		goto out;
 
-	
+
 	xmlFree(retval);
 out:
 	xmlFreeDoc(doc);
