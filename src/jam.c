@@ -7,6 +7,7 @@
 #include "config.h"
 
 #include "gtk-all.h"
+#include <gdk/gdkkeysyms.h>
 
 #include <stdio.h>
 #include <time.h>
@@ -776,6 +777,17 @@ delete_event_cb(JamWin *jw) {
 	return TRUE; /* don't ever let this delete the window; quit will do it. */
 }
 
+/* It's convenient after posting to quit the client by hitting ctrl-d. */
+static gboolean
+quick_quit_cb(JamWin *jw, GdkEventKey *event) {
+    if (event->keyval == GDK_d && event->state == GDK_CONTROL_MASK
+            && !jam_doc_get_dirty(jw->doc)) {
+        jam_quit(jw);
+        return TRUE;
+    }
+	return FALSE;
+}
+
 /* gtk stuff */
 static GType
 jam_win_get_type(void) {
@@ -830,6 +842,8 @@ jam_run(JamDoc *doc) {
 			G_CALLBACK(gtk_window_present), jw);
 	g_signal_connect_swapped(G_OBJECT(app.remote), "change_user",
 			G_CALLBACK(jam_remote_change_user_cb), jw);
+    g_signal_connect(G_OBJECT(jw), "key-press-event",
+            G_CALLBACK(quick_quit_cb), NULL);
 
 	app.cfmgr = cfmgr_new(jw->account);
 
