@@ -15,8 +15,7 @@ typedef struct MacrosEditWindow_ {
 
 void macros_edit_buttonpressed_add_cb(GtkButton *widget, MacrosEditWindow *mew);
 void macros_edit_selchanged_cb(GtkTreeSelection *treeselection, MacrosEditWindow *mew);
-void macros_edit_namechanged_cb(GtkEntry *namewidget, MacrosEditWindow *mew);
-void macros_edit_valuechanged_cb(GtkTextView *namewidget, MacrosEditWindow *mew);
+void macros_edit_save_current_macro(MacrosEditWindow *mew);
 
 void
 macros_edit_window_run(GtkWindow *parent, Macros *macros)
@@ -99,9 +98,6 @@ macros_edit_window_run(GtkWindow *parent, Macros *macros)
   g_assert(GTK_IS_ENTRY(mew->name));
   g_assert(GTK_IS_TEXT_VIEW(mew->value));
 
-  g_signal_connect(G_OBJECT(mew->name), "changed", G_CALLBACK(macros_edit_namechanged_cb), mew);
-  g_signal_connect(G_OBJECT(mew->value), "changed", G_CALLBACK(macros_edit_namechanged_cb), mew);
-
   g_signal_connect(G_OBJECT(sel), "changed", G_CALLBACK(macros_edit_selchanged_cb), mew);
 
   gtk_box_pack_start(GTK_BOX(box_right), gtk_label_new_with_mnemonic(_("_Name")), FALSE, FALSE, 0);
@@ -154,6 +150,8 @@ macros_edit_selchanged_cb(GtkTreeSelection *treeselection, MacrosEditWindow *mew
   g_assert(GTK_IS_ENTRY(mew->name));
   g_assert(GTK_IS_TEXT_VIEW(mew->value));
 
+  macros_edit_save_current_macro(mew);
+
   gtk_entry_set_text(GTK_ENTRY(mew->name), m->name);
   gtk_text_buffer_set_text
     (gtk_text_view_get_buffer(GTK_TEXT_VIEW(mew->value)), m->value, -1);
@@ -161,14 +159,20 @@ macros_edit_selchanged_cb(GtkTreeSelection *treeselection, MacrosEditWindow *mew
 }
 
 void
-macros_edit_namechanged_cb(GtkEntry *namewidget, MacrosEditWindow *mew) {
-  if (mew->current_macro_item) {
-      g_free(mew->current_macro_item->name);
-      mew->current_macro_item->name = g_strdup(gtk_entry_get_text(GTK_ENTRY(namewidget)));
-  }
-}
+macros_edit_save_current_macro(MacrosEditWindow *mew)
+{
+  GtkTextIter start, end;
+  MacroItem *cm;
 
-void
-macros_edit_valuechanged_cb(GtkTextView *namewidget, MacrosEditWindow *mew) {
+  if (cm = mew->current_macro_item)
+    {
+	  gtk_text_buffer_get_bounds(mew->value, &start, &end);
+	  g_free(cm->value);
+	  cm->value = g_strdup(gtk_text_buffer_get_text(
+	    gtk_text_view_get_buffer(GTK_TEXT_VIEW(mew->value)),
+		&start, &end, FALSE));
 
+      g_free(cm->name);
+      cm->name = g_strdup(gtk_entry_get_text(GTK_ENTRY(mew->name)));
+    }
 }
